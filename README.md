@@ -1,4 +1,4 @@
-I'm re-writing some basic libraries that I use in other languages to ensure I have a simple set of libs for doing basic concurrency.  I don't want to hvae to re-write this.  This includes single parallel process, multi parallel processing, pipelines, task scheduling and task status updates.
+I'm re-writing some basic libraries that I use in other languages to ensure I have a simple set of libs for doing basic concurrency.  I don't want to re-write this repeatedly.  This includes single parallel process, multi parallel processing, pipelines, task scheduling and task status updates.
 
 TODO: Add different controller types for handling job routing and distribution.
 
