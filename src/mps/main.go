@@ -6,32 +6,15 @@ import (
 	"github.com/google/uuid"
 	"log"
 	"os"
+	l "saint-laurent.us/m/v2/src/mps/lib"
 	"strconv"
 	"time"
 )
 
+
 /*
 	This takes advantage of a FIFO worker queue pattern to ensure parallel ordered execution.
 */
-
-type Job struct {
-	id       string
-	fn       chan int64
-	message  chan int64
-	status   chan Status
-	complete bool
-}
-
-type Status struct {
-	message string
-	tStamp  time.Time
-}
-
-type Queue struct {
-	chJobs chan *Job
-	jobs   []*Job
-	ttl    int64
-}
 
 const (
 	Queued      = "Queued"
@@ -42,12 +25,12 @@ const (
 
 func main() {
 
-	var queuedJobs []Queue
+	var queuedJobs []l.Queue
 	var cnt int64
 
 	for cnt = 0; cnt < QueueLength; cnt++ {
 
-		queuedJobs = append(queuedJobs, Queue{chJobs: make(chan *Job, QueueLength)})
+		queuedJobs = append(queuedJobs, l.Queue{ChJobs: make(chan *l.Job, QueueLength)})
 		go sequentialWorker(queuedJobs[cnt], cnt)
 	}
 
@@ -64,12 +47,12 @@ func main() {
 				c.AbortWithError(400, err)
 			}
 
-			job := Job{id: vuuid.String(), message: make(chan int64, 3), status: make(chan Status, 3)}
-			queuedJobs[queueId].jobs = append(queuedJobs[queueId].jobs, &job)
-			queuedJobs[queueId].chJobs <- &job
-			count = <-job.message
+			job := l.Job{Id: vuuid.String(), Message: make(chan int64, 3), Status: make(chan l.Status, 3)}
+			queuedJobs[queueId].Jobs = append(queuedJobs[queueId].Jobs, &job)
+			queuedJobs[queueId].ChJobs<- &job
+			count = <-job.Message
 
-			c.JSON(200, gin.H{"job_id": job.id, "queue_id": queueId, "count": count})
+			c.JSON(200, gin.H{"job_id": job.Id, "queue_id": queueId, "count": count})
 		})
 
 	r.GET("/status/queue/:queue_id/job/:job_id",
@@ -77,8 +60,8 @@ func main() {
 
 			var ok bool
 			var output string
-			var status Status
-			var job *Job
+			var status l.Status
+			var job *l.Job
 
 			queueId, err := strconv.ParseInt(c.Param("queue_id"), 10, 64)
 			jobId := c.Param("job_id")
@@ -86,28 +69,28 @@ func main() {
 				c.AbortWithError(400, err)
 			}
 
-			for _, job = range queuedJobs[queueId].jobs {
+			for _, job = range queuedJobs[queueId].Jobs {
 
-				if jobId == job.id {
+				if jobId == job.Id {
 
 					select {
-					case status, ok = <-job.status:
+					case status, ok = <-job.Status:
 						if ok {
 							break
 						}
 					default:
 						{
-							status.message = Queued
-							status.tStamp = time.Now()
+							status.Message = Queued
+							status.TStamp = time.Now()
 							break
 						}
 					}
-					status = <-job.status
+					status = <-job.Status
 				}
 			}
 
-			if status.message != "" {
-				output = fmt.Sprintf("%s Queue #%d is currently processing job %s with status: %s", status.tStamp.String(), queueId, jobId, status)
+			if status.Message != "" {
+				output = fmt.Sprintf("%s Queue #%d is currently processing job %s with status: %s", status.TStamp.String(), queueId, jobId, status)
 			} else {
 				output = fmt.Sprintf("Invalid Queue Id or Job Id")
 			}
@@ -121,11 +104,11 @@ func main() {
 	}
 }
 
-func sequentialWorker(q Queue, queueId int64) {
+func sequentialWorker(q l.Queue, queueId int64) {
 
 	var count int64
-	var status Status
-	var job *Job
+	var status l.Status
+	var job *l.Job
 
 	fName := "./keep-count-" + strconv.FormatInt(queueId, 10) + ".txt"
 	_, statErr := os.Stat(fName)
@@ -142,13 +125,13 @@ func sequentialWorker(q Queue, queueId int64) {
 		log.Fatal(err)
 	}
 
-	for job = range q.chJobs {
+	for job = range q.ChJobs {
 
-		status = Status{InProgress, time.Now()}
+		status = l.Status{InProgress, time.Now()}
 
 		select {
-			case job.status <- status:
-				log.Printf("Status update sent to Queue# %d Job # %s\n", queueId, job.id)
+			case job.Status <- status:
+				log.Printf("Status update sent to Queue# %d Job # %s\n", queueId, job.Id)
 			default:
 				log.Println("Failure to update status")
 		}
@@ -162,9 +145,9 @@ func sequentialWorker(q Queue, queueId int64) {
 		_, err = f.Seek(0, 0)
 		f.Write([]byte(fmt.Sprintf("%d\n", count)))
 
-		job.message <- count
-		status = Status{Complete, time.Now()}
-		job.status <- status
-		job.complete = true
+		job.Message<- count
+		status = l.Status{Message: Complete, TStamp: time.Now()}
+		job.Status<- status
+		job.Complete = true
 	}
 }

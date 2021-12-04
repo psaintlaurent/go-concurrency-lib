@@ -1,8 +1,9 @@
 I'm re-writing some basic libraries that I use in other languages to ensure I have a simple set of libs for doing basic concurrency.  I don't want to hve to re-write this.  This includes single parallel process, multi parallel processing, pipelines, task scheduling and task status updates.
 
-TODO: Add different controller types for handling job routes.
+TODO: Add different controller types for handling job routing and distribution.
 TODO: Handle job retries.
-TODO: Allow for job function definitions (see job.fn).
+TODO: Allow for job function definitions (see Job.fn).
+TODO: split Type definitions and pointer receivers into separate files from main.go
 TODO: Restructure the code to remove queuing from http routes.
 TODO: Use Little's Law to help predict job completion time.
 TODO: Keep track of job success, failure, completion, progress rates and times.

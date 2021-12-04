@@ -23,7 +23,6 @@ func main() {
 			retChan := make(chan int64)
 			jobCh <- retChan
 			count := <-retChan
-
 			c.JSON(200, gin.H{"message": fmt.Sprintf("Holla!, we have hit %d times.", count)})
 		})
 
